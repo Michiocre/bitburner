@@ -37,7 +37,11 @@ export async function main(_ns) {
     await nukeServers();
     await addTargets();
 
-    await initHacks();
+    await ns.sleep(100);
+
+    ns.exec('stockManager.js', hostName, 1, 0.01);
+
+    //await initHacks();
 
     let counter = 0;
 
@@ -92,7 +96,7 @@ export async function main(_ns) {
         }
 
         if (counter % 50 === 0) {
-            await manageHacks();
+            //await manageHacks();
         }
 
         await ns.sleep(100);
@@ -288,7 +292,7 @@ async function initHacks() {
     }
 }
 
-async function initHacks() {
+async function manageHacks() {
     let message;
     while ((message = ns.readPort(10) != 'NULL PORT DATA')) {
         let [serverName, target, string] = message.split(';');

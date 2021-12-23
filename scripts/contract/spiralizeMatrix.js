@@ -46,21 +46,84 @@ export async function main(ns) {
     let server = ns.args[1];
 
     let data = ns.codingcontract.getData(contract, server);
-    let anwser = solve(data, ns);
-
-    let response = "NOT YET IMPLEMENTED";
-    //let response = ns.codingcontract.attempt(anwser, contract, server, {returnReward: true});
+    let anwser = solve(data);
+    //let response = data;
+    let response = ns.codingcontract.attempt(anwser, contract, server, { returnReward: true });
 
     if (response) {
         ns.tprint(response);
     } else {
-        ns.tprint("FAILED ATTEMPT");
-        ns.tprintf("Data %j", data);
-        ns.tprintf("Anwser %j", anwser);
+        ns.tprint('FAILED ATTEMPT');
+        ns.tprintf('Data %j', data);
+        ns.tprintf('Anwser %j', anwser);
     }
 }
 
 /**
  * @param {import("../.").NS} ns
  */
-function solve(ns) {}
+function solve(data) {
+    let direction = 0; // 0 > ; 1 v ; 2 < ; 3 ^
+    let x = 0;
+    let y = 0;
+
+    let solution = [];
+
+    while (true) {
+        //console.log(data[y][x]);
+        let r = x + 1 < data[0].length && data[y][x + 1] != 'x';
+        let l = x - 1 >= 0 && data[y][x - 1] != 'x';
+        let u = y - 1 >= 0 && data[y - 1][x] != 'x';
+        let d = y + 1 < data.length && data[y + 1][x] != 'x';
+
+        if (!r && !l && !u && !d) {
+            solution.push(data[y][x]);
+            break;
+        }
+
+        switch (direction) {
+            case 0:
+                if (!r) {
+                    direction = (direction + 1) % 4;
+                }
+                break;
+            case 1:
+                if (!d) {
+                    direction = (direction + 1) % 4;
+                }
+                break;
+            case 2:
+                if (!l) {
+                    direction = (direction + 1) % 4;
+                }
+                break;
+            case 3:
+                if (!u) {
+                    direction = (direction + 1) % 4;
+                }
+                break;
+        }
+
+        solution.push(data[y][x]);
+        data[y][x] = 'x';
+
+        switch (direction) {
+            case 0:
+                x++;
+                break;
+            case 1:
+                y++;
+                break;
+            case 2:
+                x--;
+                break;
+            case 3:
+                y--;
+                break;
+            default:
+                break;
+        }
+    }
+
+    return solution;
+}

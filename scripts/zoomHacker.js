@@ -48,26 +48,31 @@ export async function main(ns) {
     let parallelRuns = usableRam / ramForRun;
     let sleepTime = wTime / parallelRuns;
 
-    if (sleepTime < 500) {
-        sleepTime = 500;
+    if (sleepTime < 1000) {
+        sleepTime = 1000;
     }
 
-    let offset = sleepTime / 2;
-    let gOffset = offset / 4;
-    let hOffset = offset / 2;
+    // H -50  | G 100 | W 200  --n00dles->  2min (G befor W)
+    // H -100 | G 50  | W 200  ->
+    let offset = sleepTime / 10;
+    let gOffset = offset * 1.5;
+    let hOffset = offset * 3;
+
+    let globalOffset = offset * 2;
 
     let totalRunCount = 0;
-    let runCount = 0;
+
+    let lastTime = 0;
 
     while (true) {
         if (ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target) > 0) {
-            ns.tprint('FAILED SINCE SEC IS TO HIGH');
+            ns.tprint('  FAILED SINCE SEC IS TO HIGH, at: ' + ns.getTimeSinceLastAug());
             ns.exit();
         }
 
-        let wSleep = 0;
-        let gSleep = wTime - gTime - gOffset;
-        let hSleep = wTime - hTime - hOffset;
+        let wSleep = globalOffset;
+        let gSleep = wTime - gTime - gOffset + globalOffset;
+        let hSleep = wTime - hTime - hOffset + globalOffset;
 
         let freeRam = ns.getServerMaxRam(server) - ns.getServerUsedRam(server);
 
@@ -76,17 +81,16 @@ export async function main(ns) {
             ns.exec('workerGrow.js', server, gThreads, target, gSleep, totalRunCount);
             ns.exec('workerHack.js', server, hThreads, target, hSleep, totalRunCount);
 
-            if (runCount < parallelRuns) {
-                await ns.sleep(sleepTime);
-                runCount++;
-            } else {
-                await ns.sleep(sleepTime + offset);
-                runCount = 0;
-            }
-
             totalRunCount++;
-        } else {
-            await ns.sleep(1000);
         }
+
+        let time = ns.getTimeSinceLastAug();
+        let speedUp = 0;
+        if (lastTime != 0) {
+            speedUp = time - lastTime - sleepTime;
+            speedUp = Math.max(speedUp, 0);
+        }
+        await ns.sleep(sleepTime - speedUp);
+        lastTime = time;
     }
 }

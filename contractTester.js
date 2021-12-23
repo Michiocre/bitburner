@@ -101,6 +101,51 @@ let ns = {
             ],
         },
         { id: 16, name: 'test-uniquePathsInAGridI', server: '', anwser: 220, data: [4, 10] },
+        {
+            id: 17,
+            name: 'test-spiralizeMatrix',
+            server: '',
+            anwser: [],
+            data: [
+                [37, 35, 3],
+                [8, 47, 29],
+                [40, 42, 6],
+                [50, 38, 37],
+                [16, 10, 46],
+                [47, 37, 8],
+                [50, 43, 13],
+                [24, 12, 13],
+                [14, 48, 27],
+                [46, 21, 21],
+                [14, 38, 48],
+                [41, 43, 46],
+                [2, 2, 35],
+                [5, 19, 49],
+                [25, 6, 29],
+            ],
+        },
+        {
+            id: 18,
+            name: 'test1-spiralizeMatrix',
+            server: '',
+            anwser: [1, 2, 3, 6, 9, 8, 7, 4, 5],
+            data: [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+            ],
+        },
+        {
+            id: 19,
+            name: 'test2-spiralizeMatrix',
+            server: '',
+            anwser: [1, 2, 3, 4, 8, 12, 11, 10, 9, 5, 6, 7],
+            data: [
+                [1, 2, 3, 4],
+                [5, 6, 7, 8],
+                [9, 10, 11, 12],
+            ],
+        },
     ],
     args: ['', ''],
     tprintf: (message, ...values) => {
@@ -115,7 +160,7 @@ let ns = {
         attempt: (anwser, contract, server) => {
             console.log(anwser);
             let con = ns.contracts.find((element) => element.name === contract && element.server === server);
-            return anwser === con.anwser ? 'Correct Anwser' : '';
+            return anwser == con.anwser ? 'Correct Anwser' : '';
         },
     },
 };
