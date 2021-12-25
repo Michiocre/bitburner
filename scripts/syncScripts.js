@@ -10,23 +10,27 @@ export async function main(_ns) {
     let filesString = ns.read(tempFile);
     let files = JSON.parse(filesString);
 
-    for (let file of files) {
-        if (ns.args[0]) {
-            if (file != 'syncScripts.js') {
-                ns.scriptKill(file, ns.getHostname());
-            }
-        }
-        let fileUrl = url + file;
-        if (file.includes('/')) {
-            file = '/' + file;
+    if (files.includes(ns.args[0])) {
+        let fileUrl = url + files[0];
+        if (files[0].includes('/')) {
+            files[0] = '/' + files[0];
         }
 
-        await ns.wget(fileUrl, file);
+        await ns.wget(fileUrl, files[0]);
+
+        for (let server of ns.getPurchasedServers()) {
+            await ns.scp(files[0], ns.getHostname(), server);
+        }
+    } else {
+        for (let file of files) {
+            let fileUrl = url + file;
+            if (file.includes('/')) {
+                file = '/' + file;
+            }
+
+            await ns.wget(fileUrl, file);
+        }
     }
 
     ns.rm(tempFile);
-
-    if (ns.args[0]) {
-        ns.run('gameManager.js');
-    }
 }

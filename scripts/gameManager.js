@@ -6,42 +6,35 @@ let ns;
 
 let hostName = '';
 let purchasedServers = [];
-/** @type {Server[]} */
+/** @type {String[]} */
 let servers = [];
 let targets = [];
 
 let serverBudget = 0.1;
 let hacknetBudget = 0.1;
-let portLevel = 0;
 
-let zoomHackers = [];
-
-let hackScript = 'workerHack.js';
-let growScript = 'workerGrow.js';
-let weakenScript = 'workerWeaken.js';
+let firstHack = true;
 
 export async function main(_ns) {
     ns = _ns;
     ns.disableLog('ALL');
     ns.enableLog('exec');
+    ns.enableLog('scp');
     ns.clearPort(20);
+    ns.clearPort(10);
 
     hostName = ns.getHostname();
 
     for (let server of await getServerArray(ns)) {
-        servers.push(new Server(server));
+        servers.push(server);
     }
+
+    targets = servers.filter((s) => ns.getServerMaxMoney(s) > 0);
+
     purchasedServers = ns.getPurchasedServers();
-
     ns.tprint('Setup complete, GameManager is running. (Use the handler.js function to interact with the running process.)');
-    await nukeServers();
-    await addTargets();
-
-    await ns.sleep(100);
 
     ns.exec('stockManager.js', hostName, 1, 0.01);
-
-    //await initHacks();
 
     let counter = 0;
 
@@ -67,11 +60,37 @@ export async function main(_ns) {
                     await manageHacknet();
                     break;
                 case 'scan':
-                    ns.exec('scan.js', hostName, 1, 'filter', ...servers.filter((s) => s.target).map((s) => s.name));
+                    ns.exec('scan.js', hostName, 1, 'filter', ...targets);
                     break;
                 case 'shutdown':
                     ns.tprint('Shutting down...');
                     ns.exit();
+                    break;
+                case 'hack':
+                    targets.sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a));
+                    servers.sort((a, b) => ns.getServerMaxRam(b) - ns.getServerMaxRam(a));
+
+                    let target = parts[1];
+                    if (target) {
+                        if (targets.includes(target)) {
+                            let server = servers.find((s) => ns.hasRootAccess(s) && s != ns.getHostname() && !ns.scriptRunning('zoomHacker.js', s));
+                            ns.exec('zoomHacker.js', server, 1, target);
+                            ns.tprint('Running hack on ' + server);
+                            targets = targets.filter((s) => s !== target);
+                            break;
+                        } else {
+                            ns.tprint('This target is already being hacked.');
+                            break;
+                        }
+                    }
+
+                    for (let i = 0; i < 25; i++) {
+                        let target = targets.find((s) => ns.hasRootAccess(s));
+                        let server = servers.find((s) => ns.hasRootAccess(s) && s != ns.getHostname() && !ns.scriptRunning('zoomHacker.js', s));
+                        ns.exec('zoomHacker.js', server, 1, target);
+                        targets = targets.filter((s) => s !== target);
+                        ns.tprint('Running hack on ' + server);
+                    }
                     break;
                 default:
                     ns.tprintf('Recieved unkown command: %s', command);
@@ -79,28 +98,18 @@ export async function main(_ns) {
             }
         }
 
-        if (counter % 200 === 199) {
-            await addTargets();
-        }
-
-        if (counter % 1000 === 50) {
+        if (counter % 100 === 0) {
             await manageServers();
+            await manageHacknet();
+            await nukeServers();
         }
 
         if (counter % 1000 === 0) {
-            await manageHacknet();
-        }
-
-        if (counter % 10000 === 0) {
             await manageContracts();
         }
 
-        if (counter % 50 === 0) {
-            //await manageHacks();
-        }
-
-        await ns.sleep(100);
-        counter = (counter + 1) % 10000;
+        await ns.sleep(1000);
+        counter++;
     }
 }
 
@@ -192,8 +201,8 @@ async function manageHacknet() {
 async function manageContracts() {
     let contracts = [];
     for (let server of servers) {
-        for (let file of ns.ls(server.name, '.cct')) {
-            contracts.push({ file: file, server: server.name });
+        for (let file of ns.ls(server, '.cct')) {
+            contracts.push({ file: file, server: server });
         }
     }
 
@@ -273,56 +282,8 @@ async function manageContracts() {
     return contracts.length;
 }
 
-async function initHacks() {
-    targets.sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a));
-    servers.sort((a, b) => ns.getServerMaxRam(b.name) - ns.getServerMaxRam(a.name));
-
-    for (const server of servers) {
-        if (server.isHome()) {
-            continue;
-        }
-
-        let target = targets.find((t) => !zoomHackers.includes(t));
-        if (!target) {
-            break;
-        }
-
-        zoomHackers.push(target);
-        ns.exec('zoomHacker.js', server.name, 1, target);
-    }
-}
-
-async function manageHacks() {
-    let message;
-    while ((message = ns.readPort(10) != 'NULL PORT DATA')) {
-        let [serverName, target, string] = message.split(';');
-
-        ns.tprintf('HACKS: %s has failed hacking %s. Restarting hack.', serverName, target);
-        ns.exec('zoomHacker.js', serverName, 1, target);
-    }
-}
-
-async function addTargets() {
-    for (let server of servers) {
-        if (targets.includes(server.name)) {
-            continue;
-        }
-        if (ns.getServerMaxMoney(server.name) <= 0) {
-            continue;
-        }
-        if (ns.getHackingLevel() < ns.getServerRequiredHackingLevel(server.name)) {
-            continue;
-        }
-        if (portLevel < ns.getServerNumPortsRequired(server.name)) {
-            continue;
-        }
-
-        targets.push(server.name);
-    }
-}
-
 async function nukeServers() {
-    let rootCounter = 0;
+    let portLevel = 0;
     if (ns.fileExists('brutessh.exe')) portLevel = 1;
     if (ns.fileExists('ftpcrack.exe')) portLevel = 2;
     if (ns.fileExists('relaysmtp.exe')) portLevel = 3;
@@ -330,47 +291,39 @@ async function nukeServers() {
     if (ns.fileExists('sqlinject.exe')) portLevel = 5;
 
     for (let server of servers) {
-        if (!ns.hasRootAccess(server.name)) {
-            switch (ns.getServerNumPortsRequired(server.name)) {
+        if (!ns.hasRootAccess(server)) {
+            switch (ns.getServerNumPortsRequired(server)) {
                 case 5:
                     if (portLevel < 5) continue;
-                    ns.sqlinject(server.name);
+                    ns.sqlinject(server);
                 case 4:
                     if (portLevel < 4) continue;
-                    ns.httpworm(server.name);
+                    ns.httpworm(server);
                 case 3:
                     if (portLevel < 3) continue;
-                    ns.relaysmtp(server.name);
+                    ns.relaysmtp(server);
                 case 2:
                     if (portLevel < 2) continue;
-                    ns.ftpcrack(server.name);
+                    ns.ftpcrack(server);
                 case 1:
                     if (portLevel < 1) continue;
-                    ns.brutessh(server.name);
+                    ns.brutessh(server);
                 case 0:
-                    ns.nuke(server.name);
+                    ns.nuke(server);
                     break;
                 default:
                     continue;
             }
         }
 
-        if (ns.hasRootAccess(server.name)) {
-            if (!server.isHome()) {
-                ns.rm(hackScript, server.name);
-                ns.rm(growScript, server.name);
-                ns.rm(weakenScript, server.name);
-                await ns.scp([hackScript, growScript, weakenScript], hostName, server.name);
+        if (ns.hasRootAccess(server)) {
+            if (server != hostName) {
+                ns.rm('workerHack.js', server);
+                ns.rm('workerGrow.js', server);
+                ns.rm('workerWeaken.js', server);
+                ns.rm('zoomHacker.js', server);
+                await ns.scp(['workerHack.js', 'workerGrow.js', 'workerWeaken.js', 'zoomHacker.js'], hostName, server);
             }
-            rootCounter++;
-            server.root = true;
-        }
-
-        if (purchasedServers.includes(server.name)) {
-            ns.rm('zoomerHacker.js', server.name);
-            await ns.scp('zoomHacker.js', hostName, server.name);
         }
     }
-
-    ns.tprintf('NUKE: Nuked %i servers and installed the worker scripts.', rootCounter);
 }

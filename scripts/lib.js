@@ -26,7 +26,7 @@ export class ServerTree {
     }
 
     /**
-     * @returns {ServerTree[]} List of all the servers
+     * @returns {Array[]} List of all the servers
      */
     toStringArray() {
         let list = [];
@@ -125,7 +125,7 @@ export function numberSquish(number, bytes) {
     if (number == 0) {
         return bytes ? '0GB' : '0.000';
     }
-    let letters = bytes ? ['GB', 'TB', 'PB'] : ['', 'k', 'm', 'b', 't'];
+    let letters = bytes ? ['GB', 'TB', 'PB'] : ['', 'k', 'm', 'b', 't', 'q'];
     let index = Math.floor(Math.log10(Math.abs(number)) / 3);
 
     if (index > 0) {

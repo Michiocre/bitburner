@@ -17,6 +17,10 @@ export async function main(ns) {
         let maxGThreads = Math.floor((usableRam - wScriptRam * 2000) / gScriptRam);
         let gThreads = Math.min(Math.ceil(ns.growthAnalyze(target, multiplier)), maxGThreads);
 
+        if (maxGThreads < 0) {
+            return;
+        }
+
         ns.exec('workerGrow.js', server, gThreads, target);
         ns.exec('workerWeaken.js', server, 2000, target);
 
@@ -52,27 +56,28 @@ export async function main(ns) {
         sleepTime = 1000;
     }
 
-    // H -50  | G 100 | W 200  --n00dles->  2min (G befor W)
-    // H -100 | G 50  | W 200  ->
     let offset = sleepTime / 10;
-    let gOffset = offset * 1.5;
-    let hOffset = offset * 3;
+    let gOffset = offset * 2;
+    let hOffset = offset * 4;
 
-    let globalOffset = offset * 2;
+    let wSleep = 0;
+    let gSleep = wTime - gTime - gOffset;
+    let hSleep = wTime - hTime - hOffset;
+
+    let globalOffset = sleepTime * 1.2 - ((hSleep + hTime) % sleepTime);
+    wSleep += globalOffset;
+    gSleep += globalOffset;
+    hSleep += globalOffset;
+
+    ns.tprint(sleepTime);
+    ns.tprint(wSleep + wTime);
+    ns.tprint(gSleep + gTime);
+    ns.tprint(hSleep + hTime);
 
     let totalRunCount = 0;
-
     let lastTime = 0;
-
     while (true) {
-        if (ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target) > 0) {
-            ns.tprint('  FAILED SINCE SEC IS TO HIGH, at: ' + ns.getTimeSinceLastAug());
-            ns.exit();
-        }
-
-        let wSleep = globalOffset;
-        let gSleep = wTime - gTime - gOffset + globalOffset;
-        let hSleep = wTime - hTime - hOffset + globalOffset;
+        gTime = ns.getGrowTime(target);
 
         let freeRam = ns.getServerMaxRam(server) - ns.getServerUsedRam(server);
 
@@ -84,6 +89,13 @@ export async function main(ns) {
             totalRunCount++;
         }
 
+        if (totalRunCount == parallelRuns - 1) {
+            let player = ns.getPlayer();
+            let targetServer = ns.getServer(target);
+            targetServer.hackDifficulty += hSecGain;
+            gTime = ns.formulas.hacking.growTime(targetServer, player);
+        }
+
         let time = ns.getTimeSinceLastAug();
         let speedUp = 0;
         if (lastTime != 0) {
@@ -93,4 +105,6 @@ export async function main(ns) {
         await ns.sleep(sleepTime - speedUp);
         lastTime = time;
     }
+
+    ns.tprint('Hack on ' + target + ' failed.');
 }

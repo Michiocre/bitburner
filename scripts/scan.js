@@ -3,6 +3,7 @@ import { ServerTree, numberSquish } from './lib.js';
 /**
  * Async
  * @param {import(".").NS} ns
+ * @return {Promise<String[]>}
  */
 export async function getServerArray(ns) {
     let root = await getChildren(ns, 'home', '');

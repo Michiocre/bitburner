@@ -56,7 +56,7 @@ export async function main(ns) {
         }
 
         budget += earned * 0.9;
-        if (earned > 0) ns.tprint('Budget (For every Earing only 90% is added back to the budget): ' + numberSquish(budget));
+        if (earned > 0) ns.tprint('SpendingMoney: (For every Earing only 90% is added back to the budget): ' + numberSquish(budget - totalSpent));
 
         await ns.sleep(2000);
     }

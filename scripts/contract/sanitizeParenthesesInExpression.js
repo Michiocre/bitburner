@@ -57,6 +57,8 @@ function validate(brackets) {
     return true;
 }
 
+let bestLength = 0;
+
 /**
  * @param {String} brackets
  * @returns {String[]}
@@ -85,15 +87,31 @@ function solve(brackets, ns) {
     }
 
     if (solutions.length > 0) {
+        bestLength = Math.max(bestLength, solutions[0].length);
         return solutions;
     }
 
-    for (let uBracket of unvalidated) {
-        let nextResult = solve(uBracket, ns);
-        if (nextResult.length > 0) {
-            return nextResult;
+    if (brackets.length > bestLength) {
+        let longestSolution = [];
+        let solutionLength = 0;
+        for (let uBracket of unvalidated) {
+            let nextResult = solve(uBracket, ns);
+            if (nextResult.length > 0) {
+                if (nextResult[0].length == solutionLength) {
+                    for (let nextString of nextResult) {
+                        if (!longestSolution.includes(nextString)) {
+                            longestSolution.push(nextString);
+                        }
+                    }
+                } else if (nextResult[0].length > solutionLength) {
+                    longestSolution = nextResult;
+                    solutionLength = nextResult[0].length;
+                }
+            }
+        }
+        if (longestSolution.length > 0) {
+            return longestSolution;
         }
     }
-
     return [];
 }

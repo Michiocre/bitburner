@@ -105,7 +105,10 @@ let ns = {
             id: 17,
             name: 'test-spiralizeMatrix',
             server: '',
-            anwser: [],
+            anwser: [
+                37, 35, 3, 29, 6, 37, 46, 8, 13, 13, 27, 21, 48, 46, 35, 49, 29, 6, 25, 5, 2, 41, 14, 46, 14, 24, 50, 47, 16, 50, 40, 8, 47, 42, 38,
+                10, 37, 43, 12, 48, 21, 38, 43, 2, 19,
+            ],
             data: [
                 [37, 35, 3],
                 [8, 47, 29],
@@ -146,6 +149,13 @@ let ns = {
                 [9, 10, 11, 12],
             ],
         },
+        {
+            id: 20,
+            name: 'failed-sanitizeParenthesesInExpression',
+            server: '',
+            anwser: '[(()(())), ((()())), (((())))]',
+            data: '(((()(()))((((',
+        },
     ],
     args: ['', ''],
     tprintf: (message, ...values) => {
@@ -160,7 +170,7 @@ let ns = {
         attempt: (anwser, contract, server) => {
             console.log(anwser);
             let con = ns.contracts.find((element) => element.name === contract && element.server === server);
-            return anwser == con.anwser ? 'Correct Anwser' : '';
+            return anwser.toString() == con.anwser.toString() ? 'Correct Anwser' : '';
         },
     },
 };
