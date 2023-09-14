@@ -1,29 +1,20 @@
-import { ServerTree, numberSquish } from './lib.js';
+import { numberSquish } from './lib/functions.js';
+import { ServerTree} from './lib/serverTree.js';
 
-/**
- * Async
- * @param {import(".").NS} ns
- * @return {Promise<String[]>}
- */
-export async function getServerArray(ns) {
-    let root = await getChildren(ns, 'home', '');
+
+/** @type {import("../../NetscriptDefinitions").NS} ns */
+let ns;
+
+export async function getServerArray() {
+    let root = await getChildren('home', '');
     return root.toStringArray();
 }
 
-/**
- * Async
- * @param {import(".").NS} ns
- */
-export async function getServerTree(ns) {
-    return await getChildren(ns, 'home', '');
+export async function getServerTree() {
+    return await getChildren('home', '');
 }
 
-/**
- * @param {import(".").NS} ns
- * @param {string} currentName
- * @param {string} parentPath
- */
-async function getChildren(ns, currentName, parentPath) {
+async function getChildren(currentName, parentPath) {
     let children = await ns.scan(currentName);
     let path = parentPath + ' > ' + currentName;
 
@@ -33,28 +24,38 @@ async function getChildren(ns, currentName, parentPath) {
         if (parentPath.split(' ').pop() === child) {
             continue;
         }
-        server.children.push(await getChildren(ns, child, path));
+        server.children.push(await getChildren(child, path));
     }
 
     return server;
 }
 
-/** @param {import(".").NS} ns */
-export async function main(ns) {
-    let serverRoot = await getServerTree(ns);
+/** @param {import("../../NetscriptDefinitions").AutocompleteData} data */
+export function autocomplete(data, args) {
+    return ['tree', 'name', 'skill', 'money', 'maxMoney', 'ram', 'maxRam', 'security', 'special', 'filter']
+}
+
+export async function main(_ns) {
+    ns = _ns;
+    if (ns.args[0] == 'help') {
+        ns.tprint('Usage: scan [tree|name|skill|money|maxMoney|ram|maxRam|security|special|filter|]')
+        return;
+    }
+
+    let serverRoot = await getServerTree();
 
     if (!ns.args[0] || ns.args[0] === 'tree') {
         let maxIndent = serverRoot.maxDepth() + serverRoot.longestName();
         ns.tprint(maxIndent);
-        ns.tprint(generateHeader(ns, maxIndent));
-        printTree(ns, serverRoot, 0, maxIndent);
+        ns.tprint(generateHeader(maxIndent));
+        printTree(serverRoot, 0, maxIndent);
     } else {
         let nameIndent = serverRoot.longestName();
         let serverList = serverRoot.toArray();
 
         switch (ns.args[0]) {
             case 'name':
-                serverList.sort((a, b) => a.name - b.name);
+                serverList.sort((a, b) => a.name < b.name ? -1 : 1 );
                 break;
             case 'skill':
                 serverList.sort((a, b) => ns.getServerRequiredHackingLevel(a.name) - ns.getServerRequiredHackingLevel(b.name));
@@ -87,7 +88,7 @@ export async function main(ns) {
                 break;
             case 'filter':
                 if (ns.args.length < 2) {
-                    ns.tprint('Missing argument.');
+                    ns.tprint('Missing arguments, just add multiple names.');
                 }
                 let searchTargets = ns.args.slice(1);
                 serverList = serverList
@@ -96,7 +97,7 @@ export async function main(ns) {
                 break;
             case 'search':
                 if (ns.args.length < 2) {
-                    ns.tprint('Missing argument.');
+                    ns.tprint('Missing argument (search works by name).');
                 }
                 serverList = serverList.filter((s) => s.name.includes(ns.args[1]));
                 break;
@@ -105,19 +106,11 @@ export async function main(ns) {
                 return;
         }
 
-        ns.tprint(generateHeader(ns, nameIndent));
+        ns.tprint(generateHeader(nameIndent));
         for (let server of serverList) {
-            ns.tprint(stringifyServer(ns, server, 0, nameIndent));
+            ns.tprint(stringifyServer(server, 0, nameIndent));
         }
         switch (ns.args[0]) {
-            case 'special':
-            case 'search':
-                if (ns.args[0] === 'special' || ns.args[0] === 'search') {
-                    for (let server of serverList) {
-                        ns.tprintf('Path to %s: %s', server.name.padEnd(13), server.path);
-                    }
-                }
-                break;
             case 'filter':
                 ns.tprintf('Total targets: %i', serverList.length);
                 break;
@@ -127,21 +120,19 @@ export async function main(ns) {
     }
 }
 
-/** @param {import(".").NS} ns */
-function printTree(ns, root, depth, maxIndent) {
-    ns.tprint(stringifyServer(ns, root, depth, maxIndent));
+function printTree(root, depth, maxIndent) {
+    ns.tprint(stringifyServer(root, depth, maxIndent));
     for (const child of root.children) {
-        printTree(ns, child, depth + 1, maxIndent);
+        printTree(child, depth + 1, maxIndent);
     }
 }
 
 let spacing = [6, 13, 13, 11, 11, 8];
 
 /**
- * @param {import(".").NS} ns
- * @param {Number} spacingMod
+ * @param {Number} nameSpacing
  */
-function generateHeader(ns, nameSpacing) {
+function generateHeader(nameSpacing) {
     let serverName = 'Server'.padEnd(nameSpacing);
     let hackingSkill = 'Skill'.padStart(spacing[0]);
     let moneyCurrent = 'Current Money'.padStart(spacing[1]);
@@ -153,12 +144,11 @@ function generateHeader(ns, nameSpacing) {
 }
 
 /**
- * @param {import(".").NS} ns
  * @param {ServerTree} server
  * @param {Number} indent
  * @param {Number} nameSpacing
  */
-function stringifyServer(ns, server, indent, nameSpacing) {
+function stringifyServer(server, indent, nameSpacing) {
     let serverName = (' '.repeat(indent) + server.name).padEnd(nameSpacing);
     let hackingSkill = ns.getServerRequiredHackingLevel(server.name).toLocaleString().padStart(spacing[0]);
     let moneyCurrent = numberSquish(ns.getServerMoneyAvailable(server.name)).padStart(spacing[1]);

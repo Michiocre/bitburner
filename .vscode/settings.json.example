@@ -1,0 +1,4 @@
+{
+    "bitburner.scriptRoot": "./scripts/",
+    "bitburner.authToken": "YOUR_TOKEN",
+}
