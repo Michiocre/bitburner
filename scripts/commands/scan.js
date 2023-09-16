@@ -1,48 +1,22 @@
-import { numberSquish } from './lib/functions.js';
-import { ServerTree} from './lib/serverTree.js';
+import { numberSquish, getServerTree } from './lib/functions.js';
+import { ServerTree } from './lib/serverTree.js';
 
+/** @param {import("../../NetscriptDefinitions").AutocompleteData} data */
+export function autocomplete(data, args) {
+    return ['tree', 'name', 'skill', 'money', 'maxMoney', 'ram', 'maxRam', 'security', 'special', 'filter'];
+}
 
 /** @type {import("../../NetscriptDefinitions").NS} ns */
 let ns;
 
-export async function getServerArray() {
-    let root = await getChildren('home', '');
-    return root.toStringArray();
-}
-
-export async function getServerTree() {
-    return await getChildren('home', '');
-}
-
-async function getChildren(currentName, parentPath) {
-    let children = await ns.scan(currentName);
-    let path = parentPath + ' > ' + currentName;
-
-    let server = new ServerTree(currentName, [], path);
-
-    for (let child of children) {
-        if (parentPath.split(' ').pop() === child) {
-            continue;
-        }
-        server.children.push(await getChildren(child, path));
-    }
-
-    return server;
-}
-
-/** @param {import("../../NetscriptDefinitions").AutocompleteData} data */
-export function autocomplete(data, args) {
-    return ['tree', 'name', 'skill', 'money', 'maxMoney', 'ram', 'maxRam', 'security', 'special', 'filter']
-}
-
 export async function main(_ns) {
     ns = _ns;
     if (ns.args[0] == 'help') {
-        ns.tprint('Usage: scan [tree|name|skill|money|maxMoney|ram|maxRam|security|special|filter|]')
+        ns.tprint('Usage: scan [tree|name|skill|money|maxMoney|ram|maxRam|security|special|filter|search]')
         return;
     }
 
-    let serverRoot = await getServerTree();
+    let serverRoot = await getServerTree(ns);
 
     if (!ns.args[0] || ns.args[0] === 'tree') {
         let maxIndent = serverRoot.maxDepth() + serverRoot.longestName();

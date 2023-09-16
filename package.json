@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "defs": "node updateDefs.js",
+    "test": "node contractTester.js"
+  },
+  "type": "module"
+}

@@ -1,4 +1,4 @@
-import { Server } from "./lib/server";
+import { Server } from "./lib/server.js";
 
 export class ServerTree {
     /**
